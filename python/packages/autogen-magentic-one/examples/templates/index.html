@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>Agent Conversation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body>
+  <div>
+    <button id="sidebar-toggle">☰</button>
+    <button id="reset-conversation" onclick="createNewConversation()">↻</button>
+  </div>
+  <!-- LEFT SIDEBAR: SETTINGS -->
+  <div class="sidebar">
+    <h2>Settings</h2>
+    <div id="debug-controls" style="display: none; flex-direction: column;">
+      <div class="switch-container">
+        <span class="switch-label">Infinite conversation</span>
+        <label class="switch">
+          <input type="checkbox" id="infinite-conversation-switch">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="switch-container">
+        <span class="switch-label">Enable multiple turns</span>
+        <label class="switch">
+          <input type="checkbox" id="enable-multiple-turns-switch">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="switch-container">
+        <span class="switch-label">Autoform</span>
+        <label class="switch">
+          <input type="checkbox" id="autoform-switch">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT CONTENT: TITLE, LOGS, CONVERSATION, INPUT -->
+  <div class="main-content">
+    <!-- This is your conversation/log area -->
+    <div id="conversation"></div>
+    
+    <!-- Input area for user -->
+    <div class="input-container">
+      <h1 class="input-prompt">Need help with a workflow?</h1>
+      <div class="input-area">
+        <textarea id="user-input" placeholder="Describe the task to automate…" rows="1"></textarea>
+        <button class="send-button" onclick="sendMessage()">➤</button>
+      </div>
+      <div class="agent-buttons">
+        <a href="#" class="solve-button" onclick="sendAgentMessage('OutlookCalendarAgent')">
+          <span class="icon-wrapper">
+            <img src="https://mattermost.com/wp-content/uploads/2023/05/Microsoft-Calendar.webp" alt="Outlook Calendar" />
+          </span>
+          Outlook Calendar
+        </a>
+        <a href="#" class="solve-button" onclick="sendAgentMessage('SlackAgent')">
+          <span class="icon-wrapper">
+            <img src="https://www.logo.wine/a/logo/Slack_Technologies/Slack_Technologies-Mark-Logo.wine.svg" alt="Slack" />
+          </span>
+          Slack
+        </a>
+        <a href="#" class="solve-button" onclick="sendAgentMessage('OutlookMailAgent')">
+          <span class="icon-wrapper">
+            <img src="https://as1.ftcdn.net/v2/jpg/05/30/55/34/1000_F_530553479_TlgDMQlYxHdgArzL1B2pFsijqnfUvyS7.jpg" alt="Outlook Mail" />
+          </span>
+          Outlook Mail
+        </a>
+        <a href="#" class="solve-button" onclick="sendAgentMessage('ChatGPTAgent')">
+          <span class="icon-wrapper">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/13/ChatGPT-Logo.png" alt="ChatGPT" />
+          </span>
+          ChatGPT
+        </a>
+        <a href="#" class="solve-button" onclick="sendAgentMessage('JiraAgent')">
+          <span class="icon-wrapper">
+            <img src="https://static-00.iconduck.com/assets.00/jira-icon-2048x2048-nmec2job.png" alt="Jira" />
+          </span>
+          Jira
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var socket = io();
+    var infiniteConversation = false;
+    var enableMultipleTurns = false;
+    var autoform = false;
+
+    window.onload = function() {
+      document.getElementById('conversation').innerHTML = '';
+
+      // Check debug status and show/hide controls
+      fetch('/debug')
+        .then(response => response.json())
+        .then(data => {
+          if (data.debug) {
+            document.getElementById('debug-controls').style.display = 'flex';
+          }
+        });
+
+      // Sidebar toggle functionality
+      var sidebarToggle = document.getElementById('sidebar-toggle');
+      var sidebar = document.querySelector('.sidebar');
+      var mainContent = document.querySelector('.main-content');
+
+      sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+        mainContent.classList.toggle('sidebar-open');
+      });
+
+      // Center input container if no messages
+      var inputContainer = document.querySelector('.input-container');
+      var conversation = document.getElementById('conversation');
+      if (conversation.children.length === 0) {
+        inputContainer.classList.add('centered');
+      }
+    };
+
+    // Initialize socket connection
+    socket.on('connect', function() {
+      console.log('Connected to server');
+      socket.emit('initialize');
+    });
+
+    socket.on('connect', function() {
+      console.log('Connected to server');
+    });
+
+    function getImageForSender(sender) {
+      switch(sender) {
+        case "UserProxy":
+          return "url('https://media.licdn.com/dms/image/v2/D4D03AQFRt1Q03_-wEQ/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1714218740089?e=2147483647&v=beta&t=myBVj6Maw1lpgTWLkJCCVyQL5f20ikpeTdtt4WOREh0')";
+        case "OutlookCalendarAgent":
+          return "url('https://mattermost.com/wp-content/uploads/2023/05/Microsoft-Calendar.webp')";
+        case "SlackAgent":
+          return "url('https://www.logo.wine/a/logo/Slack_Technologies/Slack_Technologies-Mark-Logo.wine.svg')";
+        case "OutlookMailAgent":
+          return "url('https://as1.ftcdn.net/v2/jpg/05/30/55/34/1000_F_530553479_TlgDMQlYxHdgArzL1B2pFsijqnfUvyS7.jpg')";
+        case "ChatGPTAgent":
+          return "url('https://upload.wikimedia.org/wikipedia/commons/1/13/ChatGPT-Logo.png')";
+        case "JiraAgent":
+          return "url('https://static-00.iconduck.com/assets.00/jira-icon-2048x2048-nmec2job.png')";
+        case "Orchestrator":
+        case "Orchestrator (thought)":
+          return "url('https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2024/11/12/Bedrock-icon-feat-img.png')";
+        default:
+          return "url('https://example.com/default-icon.png')";
+      }
+    }
+
+    function formatThought(source, message) {
+      if (!message.startsWith('Updated Ledger:')) {
+        return message;
+      }
+      if (source == "Orchestrator"){
+        try {
+            const json_message = message.replace('Updated Ledger:\n', '').trim();
+            const ledger = JSON.parse(message.replace('Updated Ledger:\n', '').trim());
+            return `
+            <div class="ledger-item" style="animation-delay: 0.0s;">
+              
+                Request Satisfied:
+                <span class="status ${ledger.is_request_satisfied.answer ? 'green' : 'red'}">
+                  ${ledger.is_request_satisfied.answer ? '✅' : '❌'}
+                </span>
+              
+              <p>${ledger.is_request_satisfied.reason}</p>
+            </div>
+
+            <div class="ledger-item" style="animation-delay: 0.1s;">
+                In Loop:
+                <span class="status ${ledger.is_in_loop.answer ? 'green' : 'red'}">
+                  ${ledger.is_in_loop.answer ? '✅' : '❌'}
+                </span>
+              <p>${ledger.is_in_loop.reason}</p>
+            </div>
+
+            <div class="ledger-item" style="animation-delay: 0.2s;">
+                Progress Being Made:
+                <span class="status ${ledger.is_progress_being_made.answer ? 'green' : 'red'}">
+                  ${ledger.is_progress_being_made.answer ? '✅' : '❌'}
+                </span>
+              <p>${ledger.is_progress_being_made.reason}</p>
+            </div>
+
+            <div class="ledger-item" style="animation-delay: 0.3s;">
+              Next Speaker: ${ledger.next_speaker.answer}
+              <p>${ledger.next_speaker.reason}</p>
+            </div>
+
+            <div class="ledger-item" style="animation-delay: 0.4s;">
+              Instruction/Question: ${ledger.instruction_or_question.answer}
+              <p>${ledger.instruction_or_question.reason}</p>
+            </div>
+            `;
+        } catch (e) {
+            console.error('Error parsing agent thought:', e);
+            const json_message = message.replace('Updated Ledger:', '').trim();
+            return "ERROR:" + e + "                             " + json_message;
+        }
+      } else {
+        try {
+            const json_message = message.replace('Updated Ledger:\n', '').trim();
+            const ledger = JSON.parse(message.replace('Updated Ledger:\n', '').trim());
+            return `
+            <div class="ledger-item" style="animation-delay: 0.0s;">
+                Task Complete:
+                <span class="status ${ledger.task_complete ? 'green' : 'red'}">
+                  ${ledger.task_complete ? '✅' : '❌'}
+                </span>
+              <p>${ledger.task_complete_reason}</p>
+            </div>
+
+            <div class="ledger-item" style="animation-delay: 0.1s;">
+                In Loop:
+                <span class="status ${ledger.is_in_loop ? 'green' : 'red'}">
+                  ${ledger.is_in_loop ? '✅' : '❌'}
+                </span>
+              <p>${ledger.is_in_loop_reason}</p>
+            </div>
+
+            <div class="ledger-item" style="animation-delay: 0.2s;">
+                Progress Being Made:
+                <span class="status ${ledger.is_progress_being_made ? 'green' : 'red'}">
+                  ${ledger.is_progress_being_made ? '✅' : '❌'}
+                </span>
+              <p>${ledger.is_progress_being_made_reason}</p>
+            </div>
+
+            <div class="ledger-item" style="animation-delay: 0.3s;">
+              Self Follow-Up Instruction:
+              <p>${ledger.self_follow_up_instruction}</p>
+            </div>
+            `;
+        } catch (e) {
+            console.error('Error parsing Orchestrator thought:', e);
+            const json_message = message.replace('Updated Ledger:', '').trim();
+            return "ERROR:" + e + "                             " + json_message;
+        }
+      }
+    }
+
+    let thinkingGroup = null;
+    let thinkingGroupId = 0;
+
+    function isAgentReasoning(message) {
+      return message.source.endsWith("(update ledger)");
+    }
+
+    function getAgentName(source) {
+      return source.split(" (")[0];
+    }
+
+    // Function to check if user is near bottom of conversation
+    function isNearBottom(element, threshold = 100) {
+      return element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
+    }
+
+    socket.on('log_message', function(messageData) {
+      var message = JSON.parse(messageData);
+      var conversationDiv = document.getElementById('conversation');
+      var wasNearBottom = isNearBottom(conversationDiv);
+      var agentName = getAgentName(message.source);
+      var messageContent = isAgentReasoning(message) 
+        ? formatThought(agentName, message.message)
+        : message.message;
+
+      if (message.source.startsWith("Orchestrator (->")) {
+        var targetAgent = message.source.split("->")[1].trim().slice(0, -1);
+        messageContent = `<span style="color: blue;">@${targetAgent}</span> ${messageContent}`;
+      }
+
+      if (isAgentReasoning(message)) {
+        if (!thinkingGroup || thinkingGroup.dataset.agent !== agentName) {
+          thinkingGroupId++;
+          thinkingGroup = document.createElement('div');
+          thinkingGroup.className = 'thinking-group';
+          thinkingGroup.dataset.agent = agentName;
+          thinkingGroup.innerHTML = `
+            <input type="checkbox" id="thinking-toggle-${thinkingGroupId}" class="thinking-toggle">
+            <label for="thinking-toggle-${thinkingGroupId}" class="thinking-header">🧠 ${agentName}'s reasoning</label>
+            <div class="thinking-content"></div>
+          `;
+          conversationDiv.appendChild(thinkingGroup);
+        }
+        
+        var messageHtml = messageContent;
+        
+        thinkingGroup.querySelector('.thinking-content').innerHTML += messageHtml;
+      } else {
+        // Remove code formatting
+        var cleanedMessageContent = messageContent.replace(/```/g, '');
+        var messageHtml = `
+          <div class="message" data-sender="${message.source}" style="--agent-image: ${getImageForSender(agentName)}">
+            <div class="message-header">
+              <span class="message-sender">${message.source}</span>
+              <span class="message-timestamp">${message.timestamp}</span>
+            </div>
+            <div class="message-content">${marked.parse(cleanedMessageContent)}</div>
+          </div>
+        `;
+        conversationDiv.insertAdjacentHTML('beforeend', messageHtml);
+        thinkingGroup = null;
+      }
+
+      // Move input container back to bottom and hide prompt and agent buttons after first message
+      if (conversationDiv.children.length === 1) {
+        var inputContainer = document.querySelector('.input-container');
+        inputContainer.classList.remove('centered');
+        inputContainer.querySelector('.input-prompt').style.display = 'none';
+        inputContainer.querySelector('.agent-buttons').style.display = 'none';
+      }
+
+      // Smart auto-scroll
+      if (wasNearBottom) {
+        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+      }
+
+      // If user input is needed (based on the Orchestrator's "Next speaker UserProxy")
+      if (message.source === "Orchestrator (thought)" && message.message.includes("Next speaker UserProxy")) {
+          document.getElementById('user-input').focus();
+      }
+
+      // Disable send button if request is satisfied
+      if (message.source === "Orchestrator (thought)" && message.message.includes("Request satisfied.")) {
+          document.querySelector('.send-button').disabled = true;
+      }
+    });
+
+    function sendMessage() {
+      var userInput = document.getElementById('user-input').value;
+      if (userInput.trim() === '') return;
+
+      socket.emit('user_input', userInput);
+      document.getElementById('user-input').value = '';
+    }
+
+    function createNewConversation() {
+      socket.emit('create_new_conversation', {
+        infinite_conversation: infiniteConversation,
+        enable_multiple_turns: enableMultipleTurns,
+        autoform: autoform
+      });
+      document.getElementById('conversation').innerHTML = '';
+      
+      // Center the input container and show the prompt and agent buttons
+      var inputContainer = document.querySelector('.input-container');
+      inputContainer.classList.add('centered');
+      inputContainer.querySelector('.input-prompt').style.display = 'block';
+      inputContainer.querySelector('.agent-buttons').style.display = 'flex';
+
+      // Re-enable send button
+      document.querySelector('.send-button').disabled = false;
+    }
+
+    function sendAgentMessage(agentName) {
+      var message = `Use ${agentName} to `;
+      document.getElementById('user-input').value = message;
+      document.getElementById('user-input').focus();
+    }
+
+    // Send message on Enter key
+    document.getElementById('user-input').addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Switch event handlers
+    document.getElementById('infinite-conversation-switch').addEventListener('change', function(event) {
+      infiniteConversation = event.target.checked;
+      socket.emit('set_infinite_conversation', infiniteConversation);
+    });
+
+    document.getElementById('enable-multiple-turns-switch').addEventListener('change', function(event) {
+      enableMultipleTurns = event.target.checked;
+      socket.emit('set_enable_multiple_turns', enableMultipleTurns);
+    });
+
+    document.getElementById('autoform-switch').addEventListener('change', function(event) {
+      autoform = event.target.checked;
+      socket.emit('set_autoform', autoform);
+    });
+  </script>
+</body>
+</html>

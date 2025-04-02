@@ -1,0 +1,422 @@
+/* Overall layout */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
+}
+
+/* Left sidebar for settings */
+.sidebar {
+  width: 250px;
+  background-color: #f8f8f8;
+  padding: 20px;
+  padding-top: 60px; /* Add extra padding at the top */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: -250px;
+  top: 0;
+  bottom: 0;
+  transition: left 0.3s ease-in-out;
+  z-index: 1000;
+}
+
+/* Styles for the collapsible thinking section */
+.thinking-group {
+  border-left: 2px solid #e3e3e3;
+  margin-bottom: 3px;
+  margin-top: 10px;
+  margin-left: 15%;
+}
+
+.thinking-group::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(
+    rgba(240, 240, 240, 0.7),
+    rgba(220, 220, 220, 0)
+  );
+  border-radius: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  pointer-events: none;
+  display: none;
+}
+
+.thinking-header {
+  padding: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.thinking-content {
+  margin-left: 20px;
+  margin-right: 0;
+  margin-top: 10px;
+  width: 80%;
+}
+
+.thinking-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease-out;
+}
+
+.thinking-toggle {
+  display: none;
+}
+
+.thinking-toggle:checked + .thinking-header + .thinking-content {
+  max-height: none;
+}
+
+.thinking-header::after {
+  content: '▾';
+  margin-left: 10px;
+}
+
+.thinking-toggle:checked + .thinking-header::after {
+  content: '▴';
+}
+
+.ledger-item {
+  margin-bottom: 10px;
+  width: 80%;
+  padding: 12.5px;
+  border-left: 5px solid #ccc;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: border-color 0.3s, box-shadow 0.3s;
+  opacity: 0;
+  animation: fadeInUp 0.5s forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ledger-item:hover {
+  border-color: #999;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.07);
+}
+
+.ledger-item p {
+  margin: 0;
+  line-height: 1.5;
+  color: #555;
+  font-size: 0.95em;
+}
+
+.ledger-item p + p {
+  margin-top: 8px;
+}
+
+.sidebar.open {
+  left: 0;
+}
+.sidebar h2 {
+  margin-top: 0;
+}
+.sidebar button {
+  margin-top: 20px;
+}
+
+/* Right content area for title, logs, conversation, and input */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  padding-left: 100px; /* Increase left padding */
+  padding-top: 50px; /* Add top padding */
+  box-sizing: border-box;
+  margin-left: 0;
+  transition: margin-left 0.3s ease-in-out;
+}
+.main-content.sidebar-open {
+  margin-left: 250px;
+}
+
+/* Toggle button and Reset button */
+#sidebar-toggle,
+#reset-conversation {
+  position: fixed;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px;
+  background-color: rgba(248, 248, 248, 0.7);
+  border-radius: 5px;
+  z-index: 1002; /* Increase z-index to be above sidebar */
+}
+
+#sidebar-toggle {
+  left: 10px;
+  top: 10px;
+}
+
+#reset-conversation {
+  left: 50px;
+  top: 10px;
+}
+
+/* Adjust h1 positioning */
+.main-content h1 {
+  margin-top: 0;
+  padding-top: 10px;
+}
+
+/* Top header area (title) */
+.main-content h1 {
+  margin: 0;
+  margin-bottom: 10px;
+  margin-left: 50px;
+}
+
+/* Conversation/logs section */
+#conversation {
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Input area */
+.input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    max-width: 600px;
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+.input-container.centered {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.input-prompt {
+    margin-bottom: 20px;
+    font-size: 2em;
+    color: #333;
+}
+.input-area {
+    display: flex;
+    width: 115%;
+    position: relative;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+#user-input {
+    flex: 1;
+    padding: 16px;
+    padding-right: 40px;
+    border-right: none;
+    font-size: 16px;
+    resize: none;
+    overflow-y: auto;
+    line-height: 20px;
+    height: 80px; /* Adjust this value to match your desired single row height */
+    max-height: 150px; /* Set a maximum height for the textarea */
+    border-radius: 20px 0px 0px 20px;
+    border: navajowhite;
+    outline: none; /* Remove the default focus outline */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+#user-input:focus {
+    border: navajowhite; /* Keep the border color the same when focused */
+    box-shadow: none; /* Remove any box shadow on focus */
+}
+#user-input::-webkit-scrollbar {
+    width: 8px;
+    background-color: #f5f5f5;
+}
+#user-input::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+#user-input::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+}
+.send-button {
+    padding: 15px;
+    background: none;
+    border-left: none;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+}
+.send-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.agent-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 20px;
+}
+.solve-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 1px solid #ccc;
+    border-radius: 40px;
+    background-color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    color: #555;
+    text-decoration: none;
+    margin: 5px;
+}
+.solve-button:hover {
+    background-color: #f7f7f7;
+}
+.icon-wrapper {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+    border-radius: 50%;
+}
+.icon-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 50%;
+}
+
+/* Message bubbles */
+.message {
+  max-width: 60%;
+  margin-bottom: 15px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: #E7E7E7;
+  position: relative;
+  margin-left: 15%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin-right: auto;
+}
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 0.9em;
+}
+.message-sender {
+  font-weight: bold;
+}
+.message-timestamp {
+  color: #888;
+  display: none;
+}
+.message-content {
+  white-space: normal;
+  word-wrap: break-word;
+}
+/* UserProxy message alignment and styling */
+.message[data-sender="UserProxy"] {
+  margin-left: auto;
+  margin-right: 20%;
+  background-color: #609ee1;
+  color: white;
+}
+.message::before {
+  content: "";
+  position: absolute;
+  left: -55px;
+  bottom: 0;
+  width: 50px;
+  height: 50px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 50%;
+  border: 2px solid #E7E7E7;
+}
+.message[data-sender="UserProxy"]::before {
+  left: auto;
+  right: -55px;
+  border-color: #609ee1;
+}
+.message::before {
+  background-image: var(--agent-image);
+}
+
+/* Switch styling */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin-left: 10px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px; width: 26px;
+  left: 4px; bottom: 4px;
+  background-color: #fff;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: #2196F3;
+}
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+.switch-container {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  justify-content: space-between;
+}
+.switch-label {
+  margin-right: 10px;
+  font-size: 0.9rem;
+}
