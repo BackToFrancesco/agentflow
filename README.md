@@ -1,6 +1,36 @@
 # AgentFlow: Reinventing Workflow Automation with Agentic AI
 
+![AgentFlow](imgs/agentflow-start-conversation.png)
+
 AgentFlow is an agentic application designed to automate real-world workflows using LLM-powered agents. Built on top of the Magentic-One, AgentFlow enables users to describe their goals in natural language while a team of intelligent agents translates, plans, and executes the required actions across real-world services like Outlook, Jira, Slack, and more.
+
+For a more comprehensive understanding of AgentFlow's architecture, methodology, and research foundations, please refer to the [Thesis project](https://thesis.unipd.it/retrieve/af828c2b-db56-4c30-8a3b-df22fe5345ce/Bacchin_Francesco.pdf) that documents the architecture and experimental results behind this implementation.
+
+## Agent-Based Task Execution
+
+AgentFlow automates task execution by coordinating a set of LLM-powered agents through a central orchestrator. When a user submits a request via the UI, the orchestrator breaks it down into discrete steps (Task Ledger) and delegates them to the appropriate agents.
+
+![AgentFlow](imgs/agentflow-orchestrator-reasoning.png)
+
+Each agent interacts with external APIs by executing specific functions and returning the result. The orchestrator tracks task progress using a Progress Ledger, allowing users to inspect the system’s reasoning at every step (e.g., which agent acts next, whether the task is complete, etc.).
+
+## Multi-Turn Agents
+
+Initially, agents would return control after a single action, even when multiple were needed, leading to inefficiencies and incomplete task execution. To solve this, agents now maintain an internal progress tracker and autonomously decide whether to continue executing further actions before handing control back.
+
+After each action, the agent internally evaluates:
+
+- Is the task completed?
+
+- Is there progress?
+
+- Are we stuck in a loop?
+
+- What should be done next?
+
+Only when the task is complete—or progress stalls—does the agent send a final summary back to the orchestrator. This improves performance and reliability, especially when using lighter models like GPT-4o-mini.
+
+![AgentFlow multi-turn](imgs/multi-turn-agent-reasoning.png)
 
 ## Based on [Autogen-Magentic-One](https://github.com/microsoft/autogen/tree/main/python/packages/autogen-magentic-one)
 This project is built on top of the paper [Magentic-One: A Generalist Multi-Agent System for Solving Complex Tasks](https://www.microsoft.com/en-us/research/articles/magentic-one-a-generalist-multi-agent-system-for-solving-complex-tasks/) by Microsoft.
